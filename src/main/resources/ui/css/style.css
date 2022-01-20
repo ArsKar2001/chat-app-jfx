@@ -1,0 +1,26 @@
+* {
+    -fx-font-size: 14px;
+}
+
+.message-pane {
+    -fx-text-alignment: right;
+    -fx-orientation: right;
+}
+
+.message-box {
+    -fx-text-alignment: right;
+    -fx-orientation: right;
+}
+
+.message-box-text {
+    -fx-background-color: rgba(57, 179, 206, 0.69);
+    -fx-background-radius: 5pt;
+    -fx-padding: 10px;
+    -fx-min-width: 300px;
+    -fx-max-width: 500px;
+    -fx-wrap-text: true;
+}
+
+.message-box-time {
+
+}
