@@ -44,10 +44,10 @@ public class ClientHandler {
     }
 
     class ClientSender implements Closeable {
-        private final ClientHandler client;
+        private final ClientHandler handler;
 
         public ClientSender(ClientHandler client) {
-            this.client = client;
+            this.handler = client;
         }
 
         @Override
@@ -55,7 +55,7 @@ public class ClientHandler {
             socket.close();
             in.close();
             out.close();
-            chatServer.unsubscribe(client);
+            chatServer.unsubscribe(handler);
             System.out.println("Клиент отключился!");
         }
 
@@ -65,36 +65,35 @@ public class ClientHandler {
         }
 
         private void logout() throws IOException {
-            chatServer.unsubscribe(client);
+            chatServer.unsubscribe(handler);
             authenticate();
         }
 
         private void readMessage() throws IOException {
             while (true) {
                 String message = in.readUTF();
-                if (isCommand(message)) {
-                    try {
-                        ChatCommand command = getCommand(message);
-                        if (command == END) {
-                            sendMessage("Вы отключились от сервера!");
-                            break;
+                try {
+                    ChatCommand command = getCommand(message);
+                    if (command == END) {
+                        chatServer.broadcast(message);
+                        break;
+                    }
+                    if (command == WRITE) {
+                        Matcher matcher = WRITE.getMatch(message);
+                        if (matcher.find(0)) {
+                            String[] ss = message.split("\\s+");
+                            String nick = ss[1];
+                            String mes = matcher.replaceAll("");
+                            chatServer.sendMessageByNick(nick, mes);
+                            sendMessage("Отправленно сообщение пользователю " + nick);
                         }
-                        if (command == WRITE) {
-                            Matcher matcher = WRITE.getPattern().matcher(message);
-                            if (matcher.find(0)) {
-                                String[] ss = message.split("\\s");
-                                String nick = ss[1];
-                                String mes = matcher.replaceAll("");
-                                chatServer.sendMessageByNick(nick, mes);
-                            }
-                            continue;
-                        }
-                    } catch (IllegalArgumentException e) {
-                        sendMessage("Комманда введена неправильно!");
                         continue;
                     }
+                } catch (IllegalArgumentException e) {
+                    sendMessage(ERROR + " Комманда введена неправильно!");
+                    continue;
                 }
-                chatServer.broadcast(message, client);
+                chatServer.broadcast(message, handler);
             }
             logout();
         }
@@ -102,27 +101,25 @@ public class ClientHandler {
         private void authenticate() throws IOException {
             while (true) {
                 String message = in.readUTF();
-                Matcher matcher = AUTH.getPattern().matcher(message);
-                if (matcher.find(0)) {
-                    String command = message.substring(matcher.start(), matcher.end());
-                    String[] ss = command.split("\\s");
-                    String login = ss[1];
-                    String password = ss[2];
+                if (getCommand(message) == AUTH) {
+                    String s = message.replaceAll(AUTH + "\\s", "");
+                    String[] ss = s.split("\\s");
+                    String login = ss[0];
+                    String password = ss[1];
 
                     String nick = chatServer.getNick(login, password);
                     if (nick != null) {
                         if (chatServer.isNickBusy(nick)) {
-                            sendMessage("Пользователь уже авторизован!");
+                            sendMessage(ERROR + " Пользователь уже авторизован!");
                             continue;
                         }
-                        client.nick = nick;
+                        handler.nick = nick;
                         sendMessage(AUTH_OK + " " + nick);
-                        chatServer.broadcast("Пользователь " + nick + " зашел в чат!");
-                        chatServer.subscribe(client);
-
+                        chatServer.subscribe(handler);
+                        chatServer.broadcastClientList();
                         break;
                     } else {
-                        sendMessage("Неверные лолин и пароль!");
+                        sendMessage(ERROR + " Неверные лолин и пароль!");
                     }
                 }
             }

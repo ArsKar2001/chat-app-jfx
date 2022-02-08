@@ -1,5 +1,7 @@
 package ru.geekbrains.akaramanov.chatappjfx.client;
 
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import ru.geekbrains.akaramanov.chatappjfx.ui.controllers.ChatController;
 
 import java.io.Closeable;
@@ -7,7 +9,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.util.regex.Matcher;
 
 import static ru.geekbrains.akaramanov.chatappjfx.ChatCommand.*;
 
@@ -15,11 +16,14 @@ public class ChatClient {
     private Socket socket;
     private DataInputStream in;
     private DataOutputStream out;
+    private Boolean authSuccess;
 
     private final ChatController controller;
 
     public ChatClient(ChatController controller) {
         this.controller = controller;
+        authSuccess = false;
+
         openConnection();
 
         Thread thread = new Thread(() -> {
@@ -51,6 +55,14 @@ public class ChatClient {
         }
     }
 
+    public Boolean getAuthSuccess() {
+        return authSuccess;
+    }
+
+    public void setAuthSuccess(Boolean authSuccess) {
+        this.authSuccess = authSuccess;
+    }
+
     class ClientReceiver implements Closeable {
 
         @Override
@@ -62,36 +74,53 @@ public class ChatClient {
 
         public void start() {
             authOK();
-            send();
+            read();
         }
 
         private void authOK() {
-            try {
-                while (true) {
+            while (!authSuccess) {
+                try {
                     String message = in.readUTF();
-                    Matcher matcher = AUTH_OK.getPattern().matcher(message);
-                    if (matcher.find(0)) {
-                        String command = message.substring(matcher.start(), matcher.end());
-                        String nick = command.split("\\s")[1];
-                        controller.addMessage("Успешная авторизация под ником: " + nick);
-                        break;
+                    if (getCommand(message) == ERROR) {
+                        controller.sendAlert(message, AlertType.ERROR);
+                        continue;
                     }
+                    if (authSuccess = (getCommand(message) == AUTH_OK)) {
+                        String nick = message.replaceAll(AUTH_OK + "\\s+", "");
+                        controller.sendAlert("Успешная авторизация под ником: " + nick, AlertType.INFORMATION);
+                        controller.setAuth(authSuccess = true);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
             }
         }
 
-        private void send() {
+
+        private void read() {
             try {
-                String message = "";
-                while (!END.toString().equals(message)) {
+                String message;
+                while (true) {
                     message = in.readUTF();
+                    if (getCommand(message) == END) {
+                        logout();
+                        break;
+                    }
+                    if (getCommand(message) == CLIENTS) {
+                        String[] clients = CLIENTS.getMatch(message).replaceAll("").split("\\s");
+                        controller.updateClientList(clients);
+                        continue;
+                    }
                     controller.addMessage(message);
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
+        }
+
+        private void logout() {
+            controller.setAuth(authSuccess = false);
+            start();
         }
     }
 }

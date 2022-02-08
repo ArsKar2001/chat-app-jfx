@@ -1,15 +1,19 @@
 package ru.geekbrains.akaramanov.chatappjfx;
 
+import java.util.Arrays;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public enum ChatCommand {
 
-    AUTH(Pattern.compile("/auth\\s\\w+\\s\\w+")),
-    AUTH_OK(Pattern.compile("/authok\\s\\w+")),
-    END(Pattern.compile("/end")),
-    WRITE(Pattern.compile("/write\\s\\w+\\s"));
+    AUTH(Pattern.compile("/auth\\s\\w+\\s\\w+$")),
+    AUTH_OK(Pattern.compile("/authok\\s\\w+$")),
+    END(Pattern.compile("/end$")),
+    WRITE(Pattern.compile("/write\\s\\w+\\s")),
+    CLIENTS(Pattern.compile("/clients\\s")),
+    ERROR(Pattern.compile("/error\\s"));
 
-    public static final Pattern COMMAND_PATTERN = Pattern.compile("/\\w+");
+    public static final String COMMAND_PREFIX = "/";
 
     private final Pattern pattern;
 
@@ -18,13 +22,18 @@ public enum ChatCommand {
     }
 
     public static boolean isCommand(String message) {
-        return COMMAND_PATTERN.matcher(message).find(0);
+        return message.startsWith(COMMAND_PREFIX);
     }
 
     public static ChatCommand getCommand(String str) {
-        for (ChatCommand value : values())
-            if (str.startsWith(value.toString())) return value;
-        return valueOf(str);
+        return isCommand(str) ? Arrays.stream(values())
+                .filter(command -> command.getMatch(str).find(0))
+                .findAny().orElseThrow(() -> new RuntimeException("Несуществующая команда: " + str))
+                : null;
+    }
+
+    public Matcher getMatch(String input) {
+        return getPattern().matcher(input);
     }
 
     @Override

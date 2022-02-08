@@ -1,5 +1,6 @@
 package ru.geekbrains.akaramanov.chatappjfx.server;
 
+import ru.geekbrains.akaramanov.chatappjfx.ChatCommand;
 import ru.geekbrains.akaramanov.chatappjfx.service.AuthService;
 import ru.geekbrains.akaramanov.chatappjfx.service.InMemoryAuthService;
 
@@ -9,6 +10,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 public class ChatServer {
     private final Map<String, ClientHandler> clients;
@@ -45,8 +47,9 @@ public class ChatServer {
     }
 
     public void sendMessageByNick(String nick, String message) throws IOException {
-        if (isNickBusy(nick)) {
-            clients.get(nick).sendMessage(message);
+        ClientHandler clientTo = clients.get(nick);
+        if (clientTo != null) {
+            clientTo.sendMessage("От " + nick + ": " + message);
         }
     }
 
@@ -59,14 +62,23 @@ public class ChatServer {
                 .orElse(null);
     }
 
+    public void broadcastClientList() throws IOException {
+        String message = clients.values().stream()
+                .map(ClientHandler::getNick)
+                .collect(Collectors.joining(" ", ChatCommand.CLIENTS + " ", ""));
+        broadcast(message);
+    }
+
     public void broadcast(String message, ClientHandler current) throws IOException {
         for (ClientHandler c : clients.values())
-            if (!c.equals(current))
-                c.sendMessage(message);
+            if (!c.equals(current)) {
+                String nick = current.getNick();
+                c.sendMessage("От %s:%n%s".formatted(nick, message));
+            }
     }
 
     public void broadcast(String message) throws IOException {
         for (ClientHandler c : clients.values())
-                c.sendMessage(message);
+            c.sendMessage(message);
     }
 }
