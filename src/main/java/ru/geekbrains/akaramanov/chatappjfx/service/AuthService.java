@@ -1,7 +1,7 @@
 package ru.geekbrains.akaramanov.chatappjfx.service;
 
-import java.util.Optional;
+import java.io.Closeable;
 
-public interface AuthService {
-    Optional<String> getNickByLoginAndPassword(String login, String password);
+public interface AuthService extends Closeable {
+    String getNickByLoginAndPassword(String login, String password);
 }

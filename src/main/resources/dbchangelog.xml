@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.1.xsd">
+    <changeSet id="1" author="akarman">
+        <createTable tableName="users">
+            <column name="id" type="int" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="login" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="password" type="text">
+                <constraints nullable="true"/>
+            </column>
+            <column name="nick" type="text">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="2" author="akarman">
+        <insert tableName="users">
+            <column name="login">login0</column>
+            <column name="password">password0</column>
+            <column name="nick">nick0</column>
+        </insert>
+        <insert tableName="users">
+            <column name="login">login1</column>
+            <column name="password">password1</column>
+            <column name="nick">nick1</column>
+        </insert>
+        <insert tableName="users">
+            <column name="login">login2</column>
+            <column name="password">password2</column>
+            <column name="nick">nick2</column>
+        </insert>
+    </changeSet>
+</databaseChangeLog>

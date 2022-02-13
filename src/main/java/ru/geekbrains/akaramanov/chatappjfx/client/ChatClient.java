@@ -29,7 +29,7 @@ public class ChatClient {
         Thread thread = new Thread(() -> {
             try (ClientReceiver sender = new ClientReceiver()) {
                 sender.start();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         });
@@ -44,6 +44,7 @@ public class ChatClient {
             out = new DataOutputStream(socket.getOutputStream());
         } catch (IOException e) {
             e.printStackTrace();
+            controller.sendAlert("Не удалось подключиться к серверу: " + e.getMessage(), AlertType.ERROR);
         }
     }
 
@@ -59,10 +60,6 @@ public class ChatClient {
         return authSuccess;
     }
 
-    public void setAuthSuccess(Boolean authSuccess) {
-        this.authSuccess = authSuccess;
-    }
-
     class ClientReceiver implements Closeable {
 
         @Override
@@ -72,53 +69,47 @@ public class ChatClient {
             if (out != null) out.close();
         }
 
-        public void start() {
+        public void start() throws IOException {
             authOK();
             read();
         }
 
-        private void authOK() {
-            while (!authSuccess) {
-                try {
-                    String message = in.readUTF();
-                    if (getCommand(message) == ERROR) {
-                        controller.sendAlert(message, AlertType.ERROR);
-                        continue;
-                    }
-                    if (authSuccess = (getCommand(message) == AUTH_OK)) {
-                        String nick = message.replaceAll(AUTH_OK + "\\s+", "");
-                        controller.sendAlert("Успешная авторизация под ником: " + nick, AlertType.INFORMATION);
-                        controller.setAuth(authSuccess = true);
-                    }
-                } catch (IOException e) {
-                    e.printStackTrace();
+        private void authOK() throws IOException {
+            while (true) {
+                String message = in.readUTF();
+                if (getCommand(message) == ERROR) {
+                    String s = ERROR.getMatch(message).replaceAll("");
+                    controller.sendAlert(s, AlertType.ERROR);
+                    continue;
+                }
+                if (authSuccess = (getCommand(message) == AUTH_OK)) {
+                    String nick = message.replaceAll(AUTH_OK + "\\s+", "");
+                    controller.sendAlert("Успешная авторизация под ником: " + nick, AlertType.INFORMATION);
+                    controller.setAuth(authSuccess = true);
+                    break;
                 }
             }
         }
 
 
-        private void read() {
-            try {
+        private void read() throws IOException {
+            while (true) {
                 String message;
-                while (true) {
-                    message = in.readUTF();
-                    if (getCommand(message) == END) {
-                        logout();
-                        break;
-                    }
-                    if (getCommand(message) == CLIENTS) {
-                        String[] clients = CLIENTS.getMatch(message).replaceAll("").split("\\s");
-                        controller.updateClientList(clients);
-                        continue;
-                    }
-                    controller.addMessage(message);
+                message = in.readUTF();
+                if (getCommand(message) == END) {
+                    break;
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
+                if (getCommand(message) == CLIENTS) {
+                    String[] clients = CLIENTS.getMatch(message).replaceAll("").split("\\s");
+                    controller.updateClientList(clients);
+                    continue;
+                }
+                controller.addMessage(message);
             }
+            logout();
         }
 
-        private void logout() {
+        private void logout() throws IOException {
             controller.setAuth(authSuccess = false);
             start();
         }

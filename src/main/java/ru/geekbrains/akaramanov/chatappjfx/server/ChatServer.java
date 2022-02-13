@@ -2,31 +2,31 @@ package ru.geekbrains.akaramanov.chatappjfx.server;
 
 import ru.geekbrains.akaramanov.chatappjfx.ChatCommand;
 import ru.geekbrains.akaramanov.chatappjfx.service.AuthService;
-import ru.geekbrains.akaramanov.chatappjfx.service.InMemoryAuthService;
+import ru.geekbrains.akaramanov.chatappjfx.service.DBAuthService;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class ChatServer {
-    private final Map<String, ClientHandler> clients;
+public class ChatServer implements Closeable {
+    private final Map<String, ServerHandler> handlers;
     private final AuthService authService;
 
     public ChatServer() {
-        clients = new HashMap<>();
-        authService = new InMemoryAuthService();
+        handlers = new HashMap<>();
+        authService = new DBAuthService();
     }
 
     public void start() {
         try (ServerSocket serverSocket = new ServerSocket(8189)) {
             while (true) {
-                System.out.println("Ждем подклбчения клиента...");
+                System.out.println("Ждем подключения клиента...");
                 Socket socket = serverSocket.accept();
-                new ClientHandler(socket, this);
+                new ServerHandler(socket, this);
                 System.out.println("Клиент подключился!");
             }
         } catch (IOException e) {
@@ -35,19 +35,19 @@ public class ChatServer {
     }
 
     public boolean isNickBusy(String nick) {
-        return clients.containsKey(nick);
+        return handlers.containsKey(nick);
     }
 
-    public void subscribe(ClientHandler client) {
-        System.out.println("Добавлен клиент: " + clients.put(client.getNick(), client));
+    public void subscribe(ServerHandler handler) {
+        System.out.println("Добавлен клиент: " + handlers.put(handler.getNick(), handler));
     }
 
-    public void unsubscribe(ClientHandler client) {
-        clients.remove(client.getNick());
+    public void unsubscribe(ServerHandler client) {
+        handlers.remove(client.getNick());
     }
 
     public void sendMessageByNick(String nick, String message) throws IOException {
-        ClientHandler clientTo = clients.get(nick);
+        ServerHandler clientTo = handlers.get(nick);
         if (clientTo != null) {
             clientTo.sendMessage("От " + nick + ": " + message);
         }
@@ -58,19 +58,18 @@ public class ChatServer {
     }
 
     public String getNick(String login, String password) {
-        return authService.getNickByLoginAndPassword(login, password)
-                .orElse(null);
+        return authService.getNickByLoginAndPassword(login, password);
     }
 
     public void broadcastClientList() throws IOException {
-        String message = clients.values().stream()
-                .map(ClientHandler::getNick)
+        String message = handlers.values().stream()
+                .map(ServerHandler::getNick)
                 .collect(Collectors.joining(" ", ChatCommand.CLIENTS + " ", ""));
         broadcast(message);
     }
 
-    public void broadcast(String message, ClientHandler current) throws IOException {
-        for (ClientHandler c : clients.values())
+    public void broadcast(String message, ServerHandler current) throws IOException {
+        for (ServerHandler c : handlers.values())
             if (!c.equals(current)) {
                 String nick = current.getNick();
                 c.sendMessage("От %s:%n%s".formatted(nick, message));
@@ -78,7 +77,12 @@ public class ChatServer {
     }
 
     public void broadcast(String message) throws IOException {
-        for (ClientHandler c : clients.values())
+        for (ServerHandler c : handlers.values())
             c.sendMessage(message);
+    }
+
+    @Override
+    public void close() throws IOException {
+        authService.close();
     }
 }

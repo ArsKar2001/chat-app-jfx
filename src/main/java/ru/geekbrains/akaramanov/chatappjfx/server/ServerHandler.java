@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 
 import static ru.geekbrains.akaramanov.chatappjfx.ChatCommand.*;
 
-public class ClientHandler {
+public class ServerHandler {
     private final Socket socket;
     private final ChatServer chatServer;
     private final DataInputStream in;
@@ -19,7 +19,7 @@ public class ClientHandler {
 
     private String nick;
 
-    public ClientHandler(Socket socket, ChatServer chatServer) throws IOException {
+    public ServerHandler(Socket socket, ChatServer chatServer) throws IOException {
         this.nick = "";
         this.socket = socket;
         this.chatServer = chatServer;
@@ -44,9 +44,9 @@ public class ClientHandler {
     }
 
     class ClientSender implements Closeable {
-        private final ClientHandler handler;
+        private final ServerHandler handler;
 
-        public ClientSender(ClientHandler client) {
+        public ClientSender(ServerHandler client) {
             this.handler = client;
         }
 
@@ -132,7 +132,7 @@ public class ClientHandler {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
 
-        ClientHandler that = (ClientHandler) o;
+        ServerHandler that = (ServerHandler) o;
 
         return nick.equals(that.nick);
     }
