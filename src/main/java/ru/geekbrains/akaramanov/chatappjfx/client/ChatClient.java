@@ -1,6 +1,5 @@
 package ru.geekbrains.akaramanov.chatappjfx.client;
 
-import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import ru.geekbrains.akaramanov.chatappjfx.ui.controllers.ChatController;
 
@@ -120,7 +119,6 @@ public class ChatClient {
 
         private void logout() {
             controller.setAuth(authSuccess = false);
-            start();
         }
     }
 }
