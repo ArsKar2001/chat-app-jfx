@@ -19,11 +19,16 @@ public class InMemoryAuthService implements AuthService {
     }
 
     @Override
-    public Optional<String> getNickByLoginAndPassword(String login, String password) {
+    public String getNickByLoginAndPassword(String login, String password) {
         return users.stream()
                 .filter(data -> data.login.equals(login) && data.password.equals(password))
                 .map(UserData::getNick)
-                .findFirst();
+                .findFirst().orElse(null);
+    }
+
+    @Override
+    public void close() {
+
     }
 
     private static class UserData {

@@ -6,12 +6,12 @@ import java.util.regex.Pattern;
 
 public enum ChatCommand {
 
-    AUTH(Pattern.compile("/auth\\s\\w+\\s\\w+$")),
-    AUTH_OK(Pattern.compile("/authok\\s\\w+$")),
-    END(Pattern.compile("/end$")),
-    WRITE(Pattern.compile("/write\\s\\w+\\s")),
-    CLIENTS(Pattern.compile("/clients\\s")),
-    ERROR(Pattern.compile("/error\\s"));
+    AUTH(Pattern.compile("^/auth\\s\\w+\\s\\w+$")),
+    AUTH_OK(Pattern.compile("^/authok\\s\\w+$")),
+    END(Pattern.compile("^/end$")),
+    WRITE(Pattern.compile("^/write\\s\\w+\\s")),
+    CLIENTS(Pattern.compile("^/clients\\s")),
+    ERROR(Pattern.compile("^/error"));
 
     public static final String COMMAND_PREFIX = "/";
 
